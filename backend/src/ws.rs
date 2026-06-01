@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 use crate::{
     protocol::{ClientMessage, ServerMessage},
-    state::{SharedState},
+    state::SharedState,
 };
 
 pub async fn ws_handler(
@@ -25,21 +25,24 @@ async fn handle_socket(mut socket: WebSocket, state: SharedState) {
         let mut guard = state.lock().await;
         guard.register_user(user_id, tx.clone());
         guard.enqueue_user(user_id);
-        tracing::info!("User {} connected and queued.", user_id);
+        tracing::info!("User {} connected and added to matchmaking queue.", user_id);
     }
 
     // Initial message to frontend
-    let _ = socket.send(Message::Text(serde_json::to_string(&ServerMessage::Status {
+    if let Ok(json) = serde_json::to_string(&ServerMessage::Status {
         message: "Searching for a stranger...".to_string(),
-    }).unwrap())).await;
+    }) {
+        let _ = socket.send(Message::Text(json)).await;
+    }
 
     loop {
         tokio::select! {
             // Outgoing: Read from internal channel -> write to WebSocket
             Some(server_msg) = rx.recv() => {
-                let json = serde_json::to_string(&server_msg).unwrap();
-                if socket.send(Message::Text(json)).await.is_err() {
-                    break;
+                if let Ok(json) = serde_json::to_string(&server_msg) {
+                    if socket.send(Message::Text(json)).await.is_err() {
+                        break;
+                    }
                 }
             }
             
@@ -57,18 +60,16 @@ async fn handle_socket(mut socket: WebSocket, state: SharedState) {
                                 ClientMessage::SendMessage { text } => {
                                     let guard = state.lock().await;
                                     if let Some(&partner_id) = guard.matches.get(&user_id) {
+                                        // Route message EXCLUSIVELY to the partner.
+                                        // The sender's UI handles its own text optimistically.
                                         if let Some(partner_session) = guard.sessions.get(&partner_id) {
+                                            tracing::info!("Message Route: {} ---> {}", user_id, partner_id);
                                             let _ = partner_session.tx.send(ServerMessage::ChatMessage {
                                                 id: Uuid::new_v4(),
                                                 sender: "Stranger".to_string(),
-                                                text: text.clone(),
+                                                text,
                                             }).await;
                                         }
-                                        let _ = tx.send(ServerMessage::ChatMessage {
-                                            id: Uuid::new_v4(),
-                                            sender: "You".to_string(),
-                                            text,
-                                        }).await;
                                     }
                                 }
                                 ClientMessage::Skip => {
@@ -78,9 +79,11 @@ async fn handle_socket(mut socket: WebSocket, state: SharedState) {
                                     guard.register_user(user_id, tx.clone());
                                     guard.enqueue_user(user_id);
                                     
-                                    let _ = socket.send(Message::Text(serde_json::to_string(&ServerMessage::Status {
+                                    if let Ok(json) = serde_json::to_string(&ServerMessage::Status {
                                         message: "Searching for a stranger...".to_string(),
-                                    }).unwrap())).await;
+                                    }) {
+                                        let _ = socket.send(Message::Text(json)).await;
+                                    }
 
                                     if let Some(partner_id) = old_partner {
                                         if let Some(partner_session) = guard.sessions.get(&partner_id) {
@@ -107,7 +110,7 @@ async fn handle_socket(mut socket: WebSocket, state: SharedState) {
     // Cleanup Phase on disconnection
     let mut guard = state.lock().await;
     let partner_id = guard.disconnect_user(user_id);
-    tracing::info!("User {} disconnected.", user_id);
+    tracing::info!("User {} disconnected from system.", user_id);
 
     if let Some(pid) = partner_id {
         if let Some(partner_session) = guard.sessions.get(&pid) {

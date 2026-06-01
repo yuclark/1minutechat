@@ -1,78 +1,111 @@
 let ws;
-const statusLabel = document.getElementById('statusLabel');
-const timerBadge = document.getElementById('timerBadge');
-const timerEl = document.getElementById('timer');
-const messagesEl = document.getElementById('messages');
+
+// DOM Elements Lookups
+const messagesBox = document.getElementById('messagesBox');
 const msgInput = document.getElementById('msgInput');
 const sendBtn = document.getElementById('sendBtn');
-const searchOverlay = document.getElementById('searchOverlay');
-const searchStatus = document.getElementById('searchStatus');
+const matchOverlay = document.getElementById('matchOverlay');
+const overlayStatusMsg = document.getElementById('overlayStatusMsg');
+
+// Desktop Elements Lookups
+const statusDot = document.getElementById('statusDot');
+const statusTxt = document.getElementById('statusTxt');
+const timerVal = document.getElementById('timerVal');
+
+// Mobile Elements Lookups
+const mobileStatusDot = document.getElementById('mobileStatusDot');
+const mobileStatusTxt = document.getElementById('mobileStatusTxt');
+const mobileTimerVal = document.getElementById('mobileTimerVal');
 
 function connect() {
-    // Note: When deploying to Render, swap this string to your live wss:// URL
+    console.log("Initializing protocol channel connection...");
+    
+    // Change this string to your production wss:// url when deploying to Render
     ws = new WebSocket('ws://127.0.0.1:4000/ws');
 
     ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
+        console.log("Network frame received:", msg);
         
         switch (msg.type) {
             case 'status':
-                appendMessage('system', msg.payload);
-                if (msg.payload.includes('Searching')) {
-                    statusLabel.innerHTML = `<span style="color: #6366f1">●</span> Matchmaking`;
-                    searchStatus.innerText = msg.payload;
-                    searchOverlay.classList.remove('hidden');
-                    msgInput.disabled = true;
-                    sendBtn.disabled = true;
-                    timerBadge.classList.remove('timer-urgent');
-                    timerEl.innerText = "01:00";
-                }
+                updateUIState('matching', msg.payload);
+                overlayStatusMsg.innerText = msg.payload;
+                matchOverlay.classList.remove('hidden');
+                
+                msgInput.disabled = true;
+                sendBtn.disabled = true;
+                updateTimerDisplays("01:00");
                 break;
                 
             case 'match_found':
-                messagesEl.innerHTML = ''; 
-                searchOverlay.classList.add('hidden');
-                statusLabel.innerHTML = `<span style="color: #10b981">●</span> Stranger`;
+                console.log("Match verified. Unlocking conversation fields.");
+                messagesBox.innerHTML = ''; 
+                matchOverlay.classList.add('hidden');
+                updateUIState('connected', 'Connected to Stranger');
+                
                 msgInput.disabled = false;
                 sendBtn.disabled = false;
                 msgInput.focus();
                 break;
                 
             case 'chat_message':
-                const senderClass = msg.payload.sender.toLowerCase() === 'you' ? 'you' : 'stranger';
-                appendMessage(senderClass, msg.payload.text);
+                // Messages arriving from the server are exclusively from the stranger
+                appendMessage('them', msg.payload.text);
                 break;
                 
             case 'timer':
                 const secs = msg.payload.remaining_seconds;
-                timerEl.innerText = `00:${secs < 10 ? '0' : ''}${secs}`;
-                
-                // Add the heartbeat glow animation when time drops below 10 seconds
-                if (secs <= 10) {
-                    timerBadge.classList.add('timer-urgent');
-                } else {
-                    timerBadge.classList.remove('timer-urgent');
-                }
+                const formattedTime = `00:${secs < 10 ? '0' : ''}${secs}`;
+                updateTimerDisplays(formattedTime);
                 break;
         }
     };
 
     ws.onclose = () => {
-        statusLabel.innerHTML = `<span style="color: #ef4444">●</span> Disconnected`;
-        searchStatus.innerText = 'Connection lost. Reconnecting...';
-        searchOverlay.classList.remove('hidden');
+        console.warn("Connection link dropped.");
+        updateUIState('disconnected', 'Disconnected');
+        overlayStatusMsg.innerText = 'Connection lost. Reconnecting to interface...';
+        matchOverlay.classList.remove('hidden');
         msgInput.disabled = true;
         sendBtn.disabled = true;
+        
         setTimeout(connect, 3000);
     };
 }
 
-function appendMessage(type, text) {
-    const div = document.createElement('div');
-    div.className = `bubble ${type}`;
-    div.innerText = text;
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+function updateUIState(state, text) {
+    statusTxt.innerText = text;
+    mobileStatusTxt.innerText = text;
+    
+    statusDot.className = 'dot';
+    mobileStatusDot.className = 'dot';
+    
+    if (state === 'connected') {
+        statusDot.classList.add('active');
+        mobileStatusDot.classList.add('active');
+    } else if (state === 'matching') {
+        statusDot.classList.add('matching');
+        mobileStatusDot.classList.add('matching');
+    }
+}
+
+function updateTimerDisplays(timeString) {
+    timerVal.innerText = timeString;
+    mobileTimerVal.innerText = timeString;
+}
+
+function appendMessage(classification, text) {
+    const row = document.createElement('div');
+    row.className = `msg-row ${classification}`;
+    
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerText = text;
+    
+    row.appendChild(bubble);
+    messagesBox.appendChild(row);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
 }
 
 function sendMessage() {
@@ -84,6 +117,8 @@ function sendMessage() {
         payload: { text }
     }));
     
+    // Render your own bubble instantly on click/enter
+    appendMessage('me', text);
     msgInput.value = '';
 }
 
