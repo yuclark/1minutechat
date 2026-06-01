@@ -23,15 +23,21 @@ const sendBtn = document.getElementById('sendBtn');
 const tagInput = document.getElementById('tagInput');
 const tagChips = document.getElementById('tagChips');
 
-// Sidebar Control Handles
+// Sidebar Control Handles (Desktop)
 const statusDot = document.getElementById('statusDot');
 const statusTxt = document.getElementById('statusTxt');
 const timerVal = document.getElementById('timerVal');
 
+// Navbar Control Handles (Mobile Layout Split)
+const mobileStatusDot = document.getElementById('mobileStatusDot');
+const mobileStatusTxt = document.getElementById('mobileStatusTxt');
+const mobileTimerVal = document.getElementById('mobileTimerVal');
+
 function initSocket() {
     console.log("Initializing protocol channel connection...");
     
-ws = new WebSocket('wss://https://oneminutechat-rpl3.onrender.com/ws');
+    // Change this string to your production wss:// URL when deploying to Render
+    ws = new WebSocket('ws://127.0.0.1:4000/ws');
 
     ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
@@ -162,15 +168,25 @@ function renderChips() {
 }
 
 function updateUIState(state, text) {
+    // Sync text values to both layouts simultaneously
     statusTxt.innerText = text;
-    statusDot.className = 'dot';
+    mobileStatusTxt.innerText = text;
     
-    if (state === 'connected') statusDot.classList.add('active');
-    else if (state === 'matching') statusDot.classList.add('matching');
+    statusDot.className = 'dot';
+    mobileStatusDot.className = 'dot';
+    
+    if (state === 'connected') {
+        statusDot.classList.add('active');
+        mobileStatusDot.classList.add('active');
+    } else if (state === 'matching') {
+        statusDot.classList.add('matching');
+        mobileStatusDot.classList.add('matching');
+    }
 }
 
 function updateTimerDisplay(timeString) {
     timerVal.innerText = timeString;
+    mobileTimerVal.innerText = timeString;
 }
 
 function appendMessage(classification, text) {

@@ -2,12 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
+    <!-- Premium Browser Tab Title -->
     <title>OneMinuteChat — Anonymous Interest Matching</title>
     
+    <!-- Modern Vector Lightning Bolt Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
     
+    <!-- Premium Google Fonts & Icon Packages -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -28,11 +31,21 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg-base); color: var(--text-main); height: 100vh; width: 100vw; overflow: hidden; display: flex; }
+        
+        /* Using dvh (Dynamic Viewport Height) to guarantee mobile address bar safety */
+        body { 
+            background-color: var(--bg-base); 
+            color: var(--text-main); 
+            height: 100vh;
+            height: 100dvh; 
+            width: 100vw; 
+            overflow: hidden; 
+            display: flex; 
+        }
 
         .app-shell { display: flex; width: 100%; height: 100%; }
 
-        /* Left Sidebar Panel */
+        /* Left Sidebar Panel (Desktop) */
         .sidebar {
             width: 320px;
             background-color: var(--bg-surface);
@@ -60,53 +73,70 @@
 
         .widget-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }
         .status-display { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 500; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); transition: all 0.3s ease; }
         .dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
         .dot.matching { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 
         .timer-display { font-size: 36px; font-weight: 700; font-family: monospace; color: white; display: flex; align-items: center; gap: 12px; }
 
         /* Main View Container */
-        .chat-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-base); position: relative; }
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-base); position: relative; height: 100%; }
+
+        /* Mobile Telemetry Top Navigation Navbar (Hidden on Desktop) */
+        .mobile-navbar {
+            display: none;
+            padding: 12px 16px;
+            background: rgba(18, 24, 36, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            flex-shrink: 0;
+        }
+        .mobile-navbar .status-display { font-size: 14px; }
+        .mobile-navbar .timer-display { font-size: 20px; gap: 6px; }
 
         /* Homepage View Panel Overlay */
         .home-view {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             background: var(--bg-base); z-index: 40;
             display: flex; justify-content: center; align-items: center;
-            padding: 40px; overflow-y: auto;
+            padding: 24px; overflow-y: auto;
         }
         .home-card {
             max-width: 560px; width: 100%;
-            display: flex; flex-direction: column; gap: 32px;
+            display: flex; flex-direction: column; gap: 28px;
             animation: slideUp 0.3s ease-out;
         }
-        .home-title { font-size: 32px; font-weight: 700; color: white; letter-spacing: -0.02em; }
-        .home-subtitle { color: var(--text-muted); font-size: 16px; line-height: 1.5; }
+        .home-title { font-size: 28px; font-weight: 700; color: white; letter-spacing: -0.02em; line-height: 1.2; }
+        @media (min-width: 640px) { .home-title { font-size: 32px; } }
+        .home-subtitle { color: var(--text-muted); font-size: 15px; line-height: 1.5; }
         
-        .rules-list { display: flex; flex-direction: column; gap: 16px; }
-        .rule-item { display: flex; gap: 14px; align-items: flex-start; font-size: 14px; line-height: 1.5; color: #d1d5db; }
-        .rule-item i { color: var(--accent); margin-top: 3px; }
+        .rules-list { display: flex; flex-direction: column; gap: 14px; }
+        .rule-item { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.5; color: #d1d5db; }
+        .rule-item i { color: var(--accent); margin-top: 3px; width: 16px; text-align: center; }
 
         /* Tag Input Elements */
         .tag-input-container {
             background: var(--bg-surface); border: 1px solid var(--border);
-            border-radius: 14px; padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            border-radius: 14px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            max-height: 120px; overflow-y: auto;
         }
         .tag-chip {
             background: var(--bg-bubble-stranger); border: 1px solid var(--border);
-            color: white; padding: 6px 12px; border-radius: 8px; font-size: 13px;
-            display: inline-flex; align-items: center; gap: 8px; font-weight: 500;
+            color: white; padding: 4px 10px; border-radius: 8px; font-size: 12px;
+            display: inline-flex; align-items: center; gap: 6px; font-weight: 500;
         }
         .tag-chip i { cursor: pointer; color: var(--text-muted); }
         .tag-chip i:hover { color: var(--danger); }
         .tag-input-field {
-            flex: 1; min-width: 140px; background: transparent; border: none; outline: none;
+            flex: 1; min-width: 120px; background: transparent; border: none; outline: none;
             color: white; font-size: 14px; padding: 4px 0;
         }
 
         .btn-launch {
-            background: var(--accent); color: white; padding: 16px; border-radius: 14px;
+            background: var(--accent); color: white; padding: 14px; border-radius: 14px;
             font-size: 16px; font-weight: 600; text-align: center; width: 100%; display: block;
             box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3); transition: all 0.2s;
             border: none; outline: none; cursor: pointer;
@@ -114,7 +144,8 @@
         .btn-launch:hover { background: #4f46e5; transform: translateY(-1px); }
 
         /* Message Logs Viewport */
-        .messages-container { flex: 1; padding: 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        .messages-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+        @media (min-width: 640px) { .messages-container { padding: 32px; gap: 16px; } }
         .messages-container::-webkit-scrollbar { width: 6px; }
         .messages-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
@@ -123,40 +154,56 @@
         .msg-row.them { justify-content: flex-start; }
         .msg-row.sys { justify-content: center; }
 
-        .bubble { padding: 12px 18px; border-radius: 16px; font-size: 15px; line-height: 1.5; max-width: 65%; word-wrap: break-word; }
+        .bubble { padding: 10px 16px; border-radius: 16px; font-size: 15px; line-height: 1.5; max-width: 85%; word-wrap: break-word; }
+        @media (min-width: 640px) { .bubble { max-width: 65%; padding: 12px 18px; } }
         .msg-row.me .bubble { background: var(--bg-bubble-you); color: white; border-bottom-right-radius: 4px; }
         .msg-row.them .bubble { background: var(--bg-bubble-stranger); color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border); }
         .msg-row.sys .bubble { background: transparent; color: var(--text-muted); font-size: 13px; font-style: italic; text-align: center; max-width: 100%; }
 
         /* Footer Interaction Docks */
-        .bottom-dock { padding: 24px 32px; background: linear-gradient(transparent, var(--bg-base) 40%); display: flex; gap: 16px; align-items: center; z-index: 10; }
-        .input-bar { flex: 1; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 4px 8px 4px 16px; display: flex; align-items: center; }
+        .bottom-dock { padding: 12px 16px; background: var(--bg-base); display: flex; gap: 10px; align-items: center; z-index: 10; flex-shrink: 0; }
+        @media (min-width: 640px) { .bottom-dock { padding: 24px 32px; gap: 16px; background: linear-gradient(transparent, var(--bg-base) 40%); } }
+        
+        .input-bar { flex: 1; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 2px 6px 2px 14px; display: flex; align-items: center; }
         .input-bar:focus-within { border-color: var(--accent); }
-        .input-bar input { flex: 1; background: transparent; border: none; outline: none; color: white; font-size: 15px; padding: 12px 0; }
+        
+        /* Strict 16px minimum sizing on input fields stops iOS automated viewport zooming bugs */
+        .input-bar input { flex: 1; background: transparent; border: none; outline: none; color: white; font-size: 16px; padding: 10px 0; }
         .input-bar input:disabled { cursor: not-allowed; opacity: 0.4; }
 
-        .btn-skip { background: #1a1625; color: #a5b4fc; border: 1px solid #2e264d; padding: 14px 24px; border-radius: 14px; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; border: none; outline: none; cursor: pointer; transition: all 0.2s; }
+        .btn {
+            border: none; outline: none; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 600; font-size: 14px; transition: all 0.2s ease;
+        }
+        .btn-skip { background: #1a1625; color: #a5b4fc; border: 1px solid #2e264d; padding: 12px 16px; border-radius: 14px; display: inline-flex; align-items: center; gap: 6px; height: 44px; }
+        @media (min-width: 640px) { .btn-skip { padding: 14px 24px; } }
         .btn-skip:hover { background: #251e36; color: white; border-color: var(--accent); }
-        .btn-send { width: 42px; height: 42px; background: var(--accent); color: white; border-radius: 10px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; border: none; outline: none; cursor: pointer; transition: all 0.2s; }
+        
+        .btn-skip span { display: none; }
+        @media (min-width: 480px) { .btn-skip span { display: inline; } }
+
+        .btn-send { width: 40px; height: 40px; background: var(--accent); color: white; border-radius: 10px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
         .btn-send:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
 
-        /* Immersive Tunnel / Radar Search Screen Overlay */
+        /* Immersive Tunnel Loading Overlay */
         .match-overlay {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             background: var(--bg-base); z-index: 30;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 32px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 28px;
+            padding: 20px;
         }
         
         /* Multi-layered Animation Module */
         .radar-container {
-            position: relative; width: 140px; height: 140px;
+            position: relative; width: 120px; height: 120px;
             display: flex; align-items: center; justify-content: center;
         }
         .radar-circle {
-            width: 80px; height: 80px; border-radius: 50%;
+            width: 70px; height: 70px; border-radius: 50%;
             background: rgba(99, 102, 241, 0.05); border: 2px solid var(--accent);
             display: flex; align-items: center; justify-content: center;
-            font-size: 24px; color: var(--accent); z-index: 2;
+            font-size: 22px; color: var(--accent); z-index: 2;
         }
         .travel-ring {
             position: absolute; width: 100%; height: 100%;
@@ -173,16 +220,16 @@
 
         /* Status Text Transition Layout */
         .status-msg-container {
-            text-align: center; height: 24px; overflow: hidden; display: flex; justify-content: center; align-items: center;
+            text-align: center; height: 48px; min-height: 48px; display: flex; justify-content: center; align-items: center; padding: 0 10px;
         }
         .status-msg-text {
-            font-weight: 500; color: var(--text-muted); font-size: 15px; letter-spacing: 0.02em;
+            font-weight: 500; color: var(--text-muted); font-size: 15px; letter-spacing: 0.02em; line-height: 1.4;
             animation: text-fade-in 0.4s ease-out;
         }
 
         /* Inline Linear Progressive Track */
         .travel-bar-track {
-            width: 180px; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; position: relative; margin-top: -8px;
+            width: 160px; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; position: relative;
         }
         .travel-bar-fill {
             position: absolute; width: 60px; height: 100%; background: linear-gradient(to right, transparent, var(--accent), transparent);
@@ -192,9 +239,9 @@
         /* Cancel Button Style */
         .btn-cancel {
             background: transparent; color: var(--text-muted); border: 1px solid var(--border);
-            padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 500;
+            padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 500;
             display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;
-            border: 1px solid var(--border); outline: none;
+            outline: none; margin-top: 4px;
         }
         .btn-cancel:hover { background: rgba(239, 68, 68, 0.08); border-color: var(--danger); color: var(--danger); }
 
@@ -207,22 +254,21 @@
             50% { opacity: 0.3; }
             100% { transform: scale(0.7); opacity: 0; }
         }
-        @keyframes bar-travel { 0% { left: -60px; } 100% { left: 180px; } }
+        @keyframes bar-travel { 0% { left: -60px; } 100% { left: 160px; } }
         @keyframes text-fade-in { 0% { opacity: 0; transform: translateY(4px); } 100% { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { 0% { transform: translateY(6px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
 
+        /* Tablet & Mobile Layout Shifts Handles */
         @media (max-width: 768px) {
             .sidebar { display: none; }
-            .bottom-dock { padding: 16px; }
-            .messages-container { padding: 16px; }
-            .bubble { max-width: 80%; }
-            .home-view { padding: 20px; }
+            .mobile-navbar { display: flex; }
         }
     </style>
 </head>
 <body>
 
 <div class="app-shell">
+    <!-- Desktop-Only Sidebar Dock -->
     <aside class="sidebar">
         <div class="panel-top">
             <div class="logo-area" onclick="showHome()">
@@ -231,14 +277,14 @@
             </div>
             <div class="widget-card">
                 <span class="widget-label">Session Status</span>
-                <div class="status-display" id="statusBox">
+                <div class="status-display">
                     <span class="dot" id="statusDot"></span>
                     <span id="statusTxt">Home Dashboard</span>
                 </div>
             </div>
             <div class="widget-card">
                 <span class="widget-label">Time Remaining</span>
-                <div class="timer-display" id="timerBox">
+                <div class="timer-display">
                     <i class="fa-regular fa-clock" style="font-size: 24px; color: var(--text-muted)"></i>
                     <span id="timerVal">01:00</span>
                 </div>
@@ -249,41 +295,56 @@
         </div>
     </aside>
 
+    <!-- Main Workspace Area -->
     <main class="chat-main">
+        
+        <!-- Mobile Navigation Header Bar (Becomes visible exactly when Left Sidebar is dropped) -->
+        <header class="mobile-navbar">
+            <div class="status-display">
+                <span class="dot" id="mobileStatusDot"></span>
+                <span id="mobileStatusTxt" style="font-weight: 500;">Home Dashboard</span>
+            </div>
+            <div class="timer-display">
+                <span id="mobileTimerVal" style="font-family: monospace;">01:00</span>
+            </div>
+        </header>
+
+        <!-- Landing Dashboard Screen View -->
         <div class="home-view" id="homeView">
             <div class="home-card">
                 <div>
                     <h1 class="home-title">Meet random strangers with shared interests.</h1>
-                    <p class="home-subtitle" style="margin-top: 12px;">Completely anonymous. Fast matching. Each conversation lasts exactly 60 seconds.</p>
+                    <p class="home-subtitle" style="margin-top: 10px;">Completely anonymous. Fast matching. Each conversation lasts exactly 60 seconds.</p>
                 </div>
 
                 <div class="rules-list">
                     <div class="rule-item">
                         <i class="fa-solid fa-shield-cat"></i>
-                        <div><strong>Keep it Friendly:</strong> Safe space guidelines apply. No harassment, unsolicited advertising, or toxicity.</div>
+                        <div><strong>Keep it Friendly:</strong> Safe space guidelines apply. No toxicity or harassment.</div>
                     </div>
                     <div class="rule-item">
                         <i class="fa-solid fa-hourglass-half"></i>
-                        <div><strong>60-Second Bound:</strong> Once the timer hits 0, your session automatically dissolves and you match with someone new.</div>
+                        <div><strong>60-Second Bound:</strong> Once the timer hits 0, your session automatically dissolves.</div>
                     </div>
                     <div class="rule-item">
                         <i class="fa-solid fa-mask"></i>
-                        <div><strong>Absolute Privacy:</strong> No credentials, log tracks, or profile records are compiled.</div>
+                        <div><strong>Absolute Privacy:</strong> No credentials, tracking profiles, or chat history logs are compiled.</div>
                     </div>
                 </div>
 
                 <div>
-                    <p class="widget-label" style="margin-bottom: 10px;">Enter your Interests (Optional)</p>
+                    <p class="widget-label" style="margin-bottom: 8px;">Enter your Interests (Optional)</p>
                     <div class="tag-input-container" onclick="document.getElementById('tagInput').focus()">
                         <div id="tagChips" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
                         <input type="text" class="tag-input-field" id="tagInput" placeholder="Type interest & press Enter..." onkeydown="handleTagKey(event)">
                     </div>
                 </div>
 
-                <button class="btn btn-launch" onclick="launchMatchmaking()">Start Chatting <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i></button>
+                <button class="btn btn-launch" onclick="launchMatchmaking()">Start Chatting <i class="fa-solid fa-arrow-right" style="margin-left: 6px;"></i></button>
             </div>
         </div>
 
+        <!-- Matching Queue Radar Overlay View -->
         <div class="match-overlay hidden" id="matchOverlay">
             <div class="radar-container">
                 <div class="travel-ring"></div>
@@ -305,8 +366,10 @@
             </button>
         </div>
 
+        <!-- Live Messaging Output Stream Layout -->
         <div class="messages-container" id="messagesBox"></div>
 
+        <!-- Bottom Chat Input Controls Dock -->
         <div class="bottom-dock">
             <button class="btn btn-skip" onclick="sendSkip()">
                 <i class="fa-solid fa-forward-step"></i>
