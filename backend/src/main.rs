@@ -9,6 +9,11 @@ use tokio::sync::Mutex;
 use tower_http::cors::CorsLayer;
 use state::ChatState;
 
+// Lightweight HTTP endpoint for our keep-awake cron job pinger
+async fn health_check() -> &'static str {
+    "OK"
+}
+
 #[tokio::main]
 async fn main() {
     // Initialize standard out logging
@@ -22,6 +27,7 @@ async fn main() {
 
     // Configure routes and permissive CORS for development frontends
     let app = Router::new()
+        .route("/health", get(health_check)) // Cron job target
         .route("/ws", get(ws::ws_handler))
         .layer(CorsLayer::permissive())
         .with_state(shared_state);
