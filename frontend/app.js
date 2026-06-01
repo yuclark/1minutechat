@@ -2,7 +2,7 @@ let ws;
 let userTags = [];
 let textRotationInterval = null;
 let isWaitingToJoin = false; 
-let isConnected = false; // Active connection state tracker
+let isConnected = false; 
 
 const loadingPhrases = [
     "Calibrating interest vectors...",
@@ -63,24 +63,32 @@ function initSocket() {
         
         switch (msg.type) {
             case 'status':
-                // INTERCEPT: If we were connected and receive a status update, the stranger left!
+                // Safe Defensive Payload Parsing to eliminate [object Object] bugs
+                let cleanStatusString = "Searching for a stranger...";
+                if (msg.payload) {
+                    if (typeof msg.payload === 'string') {
+                        cleanStatusString = msg.payload;
+                    } else if (typeof msg.payload === 'object') {
+                        cleanStatusString = msg.payload.text || msg.payload.message || msg.payload.status || "Searching for connections...";
+                    }
+                }
+
                 if (isConnected) {
                     isConnected = false;
                     appendMessage('sys', "❌ Stranger disconnected early.");
                     toggleActionDeck(true);
                     
-                    // Delay the radar overlay slightly so the user can read the chatbox notice
                     setTimeout(() => {
-                        if (!isConnected && !homeView.classList.contains('hidden')) {
+                        if (!isConnected && homeView.classList.contains('hidden')) {
                             matchOverlay.classList.remove('hidden');
                             updateUIState('matching', 'Finding a new partner...');
                             startTextRotation("Stranger disconnected early. Finding a new partner...");
                         }
                     }, 1200);
                 } else {
-                    updateUIState('matching', msg.payload);
+                    updateUIState('matching', cleanStatusString);
                     if (!textRotationInterval) {
-                        startTextRotation(msg.payload);
+                        startTextRotation(cleanStatusString);
                     }
                 }
                 break;
@@ -106,7 +114,6 @@ function initSocket() {
                 const secs = msg.payload.remaining_seconds;
                 updateTimerDisplay(`00:${secs < 10 ? '0' : ''}${secs}`);
                 
-                // If timer runs out naturally, reset state
                 if (secs === 0) {
                     isConnected = false;
                     appendMessage('sys', "⏳ Time is up! Session dissolved.");
@@ -121,13 +128,13 @@ function initSocket() {
         updateUIState('disconnected', 'Disconnected');
         
         if (homeView.classList.contains('hidden')) {
-            overlayStatusMsg.innerText = 'Uplink dropped by phone. Re-establishing connection...';
+            overlayStatusMsg.innerText = 'Re-establishing connection...';
             isWaitingToJoin = true; 
         }
         
         isConnected = false;
         toggleActionDeck(true);
-        setTimeout(initSocket, 2000); 
+        setTimeout(initSocket, 1500); // Accelerated retry window for unstable mobile networks
     };
 }
 
@@ -138,8 +145,8 @@ function launchMatchmaking() {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
         console.log("Socket not open yet. Queuing matchmaking packet operation...");
         isWaitingToJoin = true;
-        updateUIState('matching', 'Waking up secure server channel...');
-        startTextRotation("Waking up secure server channel...");
+        updateUIState('matching', 'Connecting to server...');
+        startTextRotation("Connecting to server...");
         return;
     }
 
@@ -215,7 +222,6 @@ function showHome() {
 function handleTagKey(e) {
     if (e.key === 'Enter' || e.key === ',') {
         e.preventDefault();
-        // Convert the tag to lowercase immediately to prevent iOS capitalization bugs
         const tag = tagInput.value.trim().replace(/,/g, '').toLowerCase();
         if (tag && !userTags.includes(tag)) {
             userTags.push(tag);
