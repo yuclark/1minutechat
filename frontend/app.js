@@ -2,7 +2,6 @@ let ws;
 let userTags = [];
 let textRotationInterval = null;
 
-// Clean, contextual loading status phrases
 const loadingPhrases = [
     "Calibrating interest vectors...",
     "Scanning active anonymous nodes...",
@@ -42,15 +41,10 @@ function initSocket() {
         switch (msg.type) {
             case 'status':
                 updateUIState('matching', msg.payload);
-                matchOverlay.classList.remove('hidden');
-                homeView.classList.add('hidden');
-                
-                // Fire up text rotator when matchmaking triggers
-                startTextRotation(msg.payload);
-                
-                msgInput.disabled = true;
-                sendBtn.disabled = true;
-                updateTimerDisplay("01:00");
+                // Keep the rotator populated cleanly
+                if (!textRotationInterval) {
+                    startTextRotation(msg.payload);
+                }
                 break;
                 
             case 'match_found':
@@ -86,15 +80,33 @@ function initSocket() {
     };
 }
 
+function launchMatchmaking() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert("Establishing fallback tunnel connection... Give it two seconds and tap again!");
+        return;
+    }
+
+    // OPTIMISTIC TRANSITION: Immediately switch screens without waiting for network response
+    homeView.classList.add('hidden');
+    matchOverlay.classList.remove('hidden');
+    updateUIState('matching', 'Searching for a stranger... ');
+    startTextRotation("Searching for a stranger...");
+
+    console.log("Submitting match protocol request with tracking tags:", userTags);
+    ws.send(JSON.stringify({
+        type: 'join',
+        payload: { tags: userTags }
+    }));
+}
+
 function startTextRotation(initialBackendMsg) {
     stopTextRotation();
     overlayStatusMsg.innerText = initialBackendMsg;
     
     let phraseIndex = 0;
     textRotationInterval = setInterval(() => {
-        // Apply smooth CSS text re-entry animation trigger
         overlayStatusMsg.style.animation = 'none';
-        void overlayStatusMsg.offsetWidth; // Force element re-flow
+        void overlayStatusMsg.offsetWidth; // Force re-draw step layout
         overlayStatusMsg.style.animation = 'text-fade-in 0.4s ease-out';
         
         overlayStatusMsg.innerText = loadingPhrases[phraseIndex];
@@ -107,14 +119,6 @@ function stopTextRotation() {
         clearInterval(textRotationInterval);
         textRotationInterval = null;
     }
-}
-
-function launchMatchmaking() {
-    console.log("Submitting match protocol request with tracking tags:", userTags);
-    ws.send(JSON.stringify({
-        type: 'join',
-        payload: { tags: userTags }
-    }));
 }
 
 function showHome() {
@@ -194,7 +198,6 @@ function sendSkip() {
     messagesBox.innerHTML = '';
     updateTimerDisplay("01:00");
     
-    // Fall straight into the upgraded text rotator on Skip action
     startTextRotation("Searching for a stranger...");
     
     updateUIState('matching', 'Searching for a stranger...');
