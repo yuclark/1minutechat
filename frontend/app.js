@@ -41,7 +41,6 @@ function initSocket() {
         switch (msg.type) {
             case 'status':
                 updateUIState('matching', msg.payload);
-                // Keep the rotator populated cleanly
                 if (!textRotationInterval) {
                     startTextRotation(msg.payload);
                 }
@@ -86,10 +85,9 @@ function launchMatchmaking() {
         return;
     }
 
-    // OPTIMISTIC TRANSITION: Immediately switch screens without waiting for network response
     homeView.classList.add('hidden');
     matchOverlay.classList.remove('hidden');
-    updateUIState('matching', 'Searching for a stranger... ');
+    updateUIState('matching', 'Searching for a stranger...');
     startTextRotation("Searching for a stranger...");
 
     console.log("Submitting match protocol request with tracking tags:", userTags);
@@ -99,6 +97,13 @@ function launchMatchmaking() {
     }));
 }
 
+function sendCancel() {
+    console.log("Canceling matchmaking procedure. Transmitting queue eviction frame.");
+    stopTextRotation();
+    ws.send(JSON.stringify({ type: 'cancel' }));
+    showHome();
+}
+
 function startTextRotation(initialBackendMsg) {
     stopTextRotation();
     overlayStatusMsg.innerText = initialBackendMsg;
@@ -106,7 +111,7 @@ function startTextRotation(initialBackendMsg) {
     let phraseIndex = 0;
     textRotationInterval = setInterval(() => {
         overlayStatusMsg.style.animation = 'none';
-        void overlayStatusMsg.offsetWidth; // Force re-draw step layout
+        void overlayStatusMsg.offsetWidth; 
         overlayStatusMsg.style.animation = 'text-fade-in 0.4s ease-out';
         
         overlayStatusMsg.innerText = loadingPhrases[phraseIndex];

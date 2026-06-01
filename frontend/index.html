@@ -185,6 +185,15 @@
             animation: bar-travel 1.4s infinite linear;
         }
 
+        /* Cancel Button Style */
+        .btn-cancel {
+            background: transparent; color: var(--text-muted); border: 1px solid var(--border);
+            padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 500;
+            display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;
+            border: 1px solid var(--border); outline: none;
+        }
+        .btn-cancel:hover { background: rgba(239, 68, 68, 0.08); border-color: var(--danger); color: var(--danger); }
+
         .hidden { display: none !important; }
 
         /* Cinematic Animations */
@@ -287,6 +296,9 @@
             <div class="travel-bar-track">
                 <div class="travel-bar-fill"></div>
             </div>
+            <button class="btn btn-cancel" onclick="sendCancel()">
+                <i class="fa-solid fa-xmark"></i> Abort Matching
+            </button>
         </div>
 
         <div class="messages-container" id="messagesBox"></div>

@@ -13,6 +13,9 @@ pub enum ClientMessage {
     
     #[serde(rename = "skip")]
     Skip,
+    
+    #[serde(rename = "cancel")]
+    Cancel,
 }
 
 /// Messages sent from the Server (Backend) to the Client (Frontend)

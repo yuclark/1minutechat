@@ -95,6 +95,11 @@ async fn handle_socket(mut socket: WebSocket, state: SharedState) {
                                         }
                                     }
                                 }
+                                ClientMessage::Cancel => {
+                                    let mut guard = state.lock().await;
+                                    tracing::info!("User {} canceled matchmaking request. Dequeuing.", user_id);
+                                    guard.dequeue_user(user_id);
+                                }
                             }
                         }
                     }
