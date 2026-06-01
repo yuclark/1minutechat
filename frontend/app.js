@@ -1,23 +1,22 @@
 let ws;
+let userTags = [];
 
-// DOM Elements Lookups
+// DOM Element Selectors
+const homeView = document.getElementById('homeView');
+const matchOverlay = document.getElementById('matchOverlay');
+const overlayStatusMsg = document.getElementById('overlayStatusMsg');
 const messagesBox = document.getElementById('messagesBox');
 const msgInput = document.getElementById('msgInput');
 const sendBtn = document.getElementById('sendBtn');
-const matchOverlay = document.getElementById('matchOverlay');
-const overlayStatusMsg = document.getElementById('overlayStatusMsg');
+const tagInput = document.getElementById('tagInput');
+const tagChips = document.getElementById('tagChips');
 
-// Desktop Elements Lookups
+// Sidebar Control Handles
 const statusDot = document.getElementById('statusDot');
 const statusTxt = document.getElementById('statusTxt');
 const timerVal = document.getElementById('timerVal');
 
-// Mobile Elements Lookups
-const mobileStatusDot = document.getElementById('mobileStatusDot');
-const mobileStatusTxt = document.getElementById('mobileStatusTxt');
-const mobileTimerVal = document.getElementById('mobileTimerVal');
-
-function connect() {
+function initSocket() {
     console.log("Initializing protocol channel connection...");
     
     // Change this string to your production wss:// url when deploying to Render
@@ -25,23 +24,24 @@ function connect() {
 
     ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-        console.log("Network frame received:", msg);
+        console.log("Packet downbound stream:", msg);
         
         switch (msg.type) {
             case 'status':
                 updateUIState('matching', msg.payload);
                 overlayStatusMsg.innerText = msg.payload;
                 matchOverlay.classList.remove('hidden');
+                homeView.classList.add('hidden');
                 
                 msgInput.disabled = true;
                 sendBtn.disabled = true;
-                updateTimerDisplays("01:00");
+                updateTimerDisplay("01:00");
                 break;
                 
             case 'match_found':
-                console.log("Match verified. Unlocking conversation fields.");
                 messagesBox.innerHTML = ''; 
                 matchOverlay.classList.add('hidden');
+                homeView.classList.add('hidden');
                 updateUIState('connected', 'Connected to Stranger');
                 
                 msgInput.disabled = false;
@@ -50,59 +50,85 @@ function connect() {
                 break;
                 
             case 'chat_message':
-                // Messages arriving from the server are exclusively from the stranger
                 appendMessage('them', msg.payload.text);
                 break;
                 
             case 'timer':
                 const secs = msg.payload.remaining_seconds;
-                const formattedTime = `00:${secs < 10 ? '0' : ''}${secs}`;
-                updateTimerDisplays(formattedTime);
+                updateTimerDisplay(`00:${secs < 10 ? '0' : ''}${secs}`);
                 break;
         }
     };
 
     ws.onclose = () => {
-        console.warn("Connection link dropped.");
         updateUIState('disconnected', 'Disconnected');
-        overlayStatusMsg.innerText = 'Connection lost. Reconnecting to interface...';
+        overlayStatusMsg.innerText = 'Network link disrupted. Reconnecting...';
         matchOverlay.classList.remove('hidden');
-        msgInput.disabled = true;
-        sendBtn.disabled = true;
-        
-        setTimeout(connect, 3000);
+        setTimeout(initSocket, 3000);
     };
+}
+
+function launchMatchmaking() {
+    console.log("Submitting match protocol request with tracking tags:", userTags);
+    ws.send(JSON.stringify({
+        type: 'join',
+        payload: { tags: userTags }
+    }));
+}
+
+function showHome() {
+    homeView.classList.remove('hidden');
+    matchOverlay.classList.add('hidden');
+    updateUIState('home', 'Home Dashboard');
+    msgInput.disabled = true;
+    sendBtn.disabled = true;
+}
+
+function handleTagKey(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        const tag = tagInput.value.trim().replace(/,/g, '');
+        if (tag && !userTags.includes(tag)) {
+            userTags.push(tag);
+            renderChips();
+        }
+        tagInput.value = '';
+    }
+}
+
+function removeTag(tag) {
+    userTags = userTags.filter(t => t !== tag);
+    renderChips();
+}
+
+function renderChips() {
+    tagChips.innerHTML = '';
+    userTags.forEach(tag => {
+        const chip = document.createElement('div');
+        chip.className = 'tag-chip';
+        chip.innerHTML = `${tag} <i class="fa-solid fa-xmark" onclick="removeTag('${tag}')"></i>`;
+        tagChips.appendChild(chip);
+    });
 }
 
 function updateUIState(state, text) {
     statusTxt.innerText = text;
-    mobileStatusTxt.innerText = text;
-    
     statusDot.className = 'dot';
-    mobileStatusDot.className = 'dot';
     
-    if (state === 'connected') {
-        statusDot.classList.add('active');
-        mobileStatusDot.classList.add('active');
-    } else if (state === 'matching') {
-        statusDot.classList.add('matching');
-        mobileStatusDot.classList.add('matching');
-    }
+    if (state === 'connected') statusDot.classList.add('active');
+    else if (state === 'matching') statusDot.classList.add('matching');
 }
 
-function updateTimerDisplays(timeString) {
+function updateTimerDisplay(timeString) {
     timerVal.innerText = timeString;
-    mobileTimerVal.innerText = timeString;
 }
 
 function appendMessage(classification, text) {
     const row = document.createElement('div');
     row.className = `msg-row ${classification}`;
-    
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
     bubble.innerText = text;
-    
     row.appendChild(bubble);
     messagesBox.appendChild(row);
     messagesBox.scrollTop = messagesBox.scrollHeight;
@@ -117,12 +143,22 @@ function sendMessage() {
         payload: { text }
     }));
     
-    // Render your own bubble instantly on click/enter
     appendMessage('me', text);
     msgInput.value = '';
 }
 
 function sendSkip() {
+    console.log("Skip initiated. Forcing clean local interface reset.");
+    
+    // Reset layout states instantly to remove instant-rematch latency perception
+    messagesBox.innerHTML = '';
+    updateUIState('matching', 'Searching for a stranger...');
+    overlayStatusMsg.innerText = 'Searching for a stranger...';
+    matchOverlay.classList.remove('hidden');
+    msgInput.disabled = true;
+    sendBtn.disabled = true;
+    updateTimerDisplay("01:00");
+
     ws.send(JSON.stringify({ type: 'skip' }));
 }
 
@@ -130,4 +166,4 @@ function handleKey(e) {
     if (e.key === 'Enter') sendMessage();
 }
 
-connect();
+initSocket();

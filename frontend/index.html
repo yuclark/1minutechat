@@ -28,7 +28,7 @@
 
         .app-shell { display: flex; width: 100%; height: 100%; }
 
-        /* Left Sidebar (Desktop Viewport) */
+        /* Left Sidebar Panel */
         .sidebar {
             width: 320px;
             background-color: var(--bg-surface);
@@ -41,7 +41,7 @@
         }
 
         .panel-top { display: flex; flex-direction: column; gap: 32px; }
-        .logo-area { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; color: white; }
+        .logo-area { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; color: white; cursor: pointer; }
         .logo-area i { color: var(--accent); }
 
         .widget-card {
@@ -61,23 +61,54 @@
         .dot.matching { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 
         .timer-display { font-size: 36px; font-weight: 700; font-family: monospace; color: white; display: flex; align-items: center; gap: 12px; }
-        .timer-display.urgent { color: var(--danger); animation: jitter 0.2s infinite secondary; }
 
-        /* Main Workspace Panel */
+        /* Main View Container */
         .chat-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-base); position: relative; }
 
-        /* Navigation Bar Header (Mobile Viewport) */
-        .mobile-header {
-            display: none;
-            padding: 16px;
-            background: var(--bg-surface);
-            border-bottom: 1px solid var(--border);
-            justify-content: space-between;
-            align-items: center;
-            z-index: 10;
+        /* Homepage View Panel Overlay */
+        .home-view {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-base); z-index: 40;
+            display: flex; justify-content: center; align-items: center;
+            padding: 40px; overflow-y: auto;
+        }
+        .home-card {
+            max-width: 560px; width: 100%;
+            display: flex; flex-direction: column; gap: 32px;
+            animation: slideUp 0.3s ease-out;
+        }
+        .home-title { font-size: 32px; font-weight: 700; color: white; letter-spacing: -0.02em; }
+        .home-subtitle { color: var(--text-muted); font-size: 16px; line-height: 1.5; }
+        
+        .rules-list { display: flex; flex-direction: column; gap: 16px; }
+        .rule-item { display: flex; gap: 14px; align-items: flex-start; font-size: 14px; line-height: 1.5; color: #d1d5db; }
+        .rule-item i { color: var(--accent); margin-top: 3px; }
+
+        /* Premium Tag Input Elements */
+        .tag-input-container {
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+        }
+        .tag-chip {
+            background: var(--bg-bubble-stranger); border: 1px solid var(--border);
+            color: white; padding: 6px 12px; border-radius: 8px; font-size: 13px;
+            display: inline-flex; align-items: center; gap: 8px; font-weight: 500;
+        }
+        .tag-chip i { cursor: pointer; color: var(--text-muted); }
+        .tag-chip i:hover { color: var(--danger); }
+        .tag-input-field {
+            flex: 1; min-width: 140px; background: transparent; border: none; outline: none;
+            color: white; font-size: 14px; padding: 4px 0;
         }
 
-        /* Message Stream */
+        .btn-launch {
+            background: var(--accent); color: white; padding: 16px; border-radius: 14px;
+            font-size: 16px; font-weight: 600; text-align: center; width: 100%; display: block;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3); transition: all 0.2s;
+        }
+        .btn-launch:hover { background: #4f46e5; transform: translateY(-1px); }
+
+        /* Message Logs Viewport */
         .messages-container { flex: 1; padding: 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
         .messages-container::-webkit-scrollbar { width: 6px; }
         .messages-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
@@ -87,58 +118,27 @@
         .msg-row.them { justify-content: flex-start; }
         .msg-row.sys { justify-content: center; }
 
-        .bubble {
-            padding: 12px 18px;
-            border-radius: 16px;
-            font-size: 15px;
-            line-height: 1.5;
-            max-width: 65%;
-            word-wrap: break-word;
-        }
+        .bubble { padding: 12px 18px; border-radius: 16px; font-size: 15px; line-height: 1.5; max-width: 65%; word-wrap: break-word; }
         .msg-row.me .bubble { background: var(--bg-bubble-you); color: white; border-bottom-right-radius: 4px; }
         .msg-row.them .bubble { background: var(--bg-bubble-stranger); color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border); }
         .msg-row.sys .bubble { background: transparent; color: var(--text-muted); font-size: 13px; font-style: italic; text-align: center; max-width: 100%; }
 
-        /* Bottom Controls Dock */
+        /* Footer Interaction Docks */
         .bottom-dock { padding: 24px 32px; background: linear-gradient(transparent, var(--bg-base) 40%); display: flex; gap: 16px; align-items: center; z-index: 10; }
-        .input-bar {
-            flex: 1;
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 4px 8px 4px 16px;
-            display: flex;
-            align-items: center;
-        }
+        .input-bar { flex: 1; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 4px 8px 4px 16px; display: flex; align-items: center; }
         .input-bar:focus-within { border-color: var(--accent); }
-
-        .input-bar input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            outline: none;
-            color: white;
-            font-size: 15px;
-            padding: 12px 0;
-        }
+        .input-bar input { flex: 1; background: transparent; border: none; outline: none; color: white; font-size: 15px; padding: 12px 0; }
         .input-bar input:disabled { cursor: not-allowed; opacity: 0.4; }
 
-        .btn {
-            border: none; outline: none; cursor: pointer;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-weight: 600; font-size: 14px; transition: all 0.2s ease;
-        }
-        .btn-skip { background: #1a1625; color: #a5b4fc; border: 1px solid #2e264d; padding: 14px 24px; border-radius: 14px; gap: 8px; }
+        .btn-skip { background: #1a1625; color: #a5b4fc; border: 1px solid #2e264d; padding: 14px 24px; border-radius: 14px; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
         .btn-skip:hover { background: #251e36; color: white; border-color: var(--accent); }
-
-        .btn-send { width: 42px; height: 42px; background: var(--accent); color: white; border-radius: 10px; font-size: 16px; }
-        .btn-send:hover { background: #4f46e5; }
+        .btn-send { width: 42px; height: 42px; background: var(--accent); color: white; border-radius: 10px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; }
         .btn-send:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
 
-        /* Full Screen Radar Search System Overlay */
+        /* Search Screen Radar Layer overlay */
         .match-overlay {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: var(--bg-base); z-index: 5;
+            background: var(--bg-base); z-index: 30;
             display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px;
         }
         .radar-circle {
@@ -160,10 +160,10 @@
 
         @media (max-width: 768px) {
             .sidebar { display: none; }
-            .mobile-header { display: flex; }
             .bottom-dock { padding: 16px; }
             .messages-container { padding: 16px; }
             .bubble { max-width: 80%; }
+            .home-view { padding: 20px; }
         }
     </style>
 </head>
@@ -172,7 +172,7 @@
 <div class="app-shell">
     <aside class="sidebar">
         <div class="panel-top">
-            <div class="logo-area">
+            <div class="logo-area" onclick="showHome()">
                 <i class="fa-solid fa-bolt"></i>
                 <span>OneMinuteChat</span>
             </div>
@@ -180,7 +180,7 @@
                 <span class="widget-label">Session Status</span>
                 <div class="status-display" id="statusBox">
                     <span class="dot" id="statusDot"></span>
-                    <span id="statusTxt">Connecting...</span>
+                    <span id="statusTxt">Home Dashboard</span>
                 </div>
             </div>
             <div class="widget-card">
@@ -197,21 +197,45 @@
     </aside>
 
     <main class="chat-main">
-        <header class="mobile-header">
-            <div class="status-display" id="mobileStatusBox">
-                <span class="dot" id="mobileStatusDot"></span>
-                <span id="mobileStatusTxt">Connecting...</span>
-            </div>
-            <div class="timer-display" id="mobileTimerBox" style="font-size: 18px; gap: 6px;">
-                <span id="mobileTimerVal">01:00</span>
-            </div>
-        </header>
+        <div class="home-view" id="homeView">
+            <div class="home-card">
+                <div>
+                    <h1 class="home-title">Meet random strangers with shared interests.</h1>
+                    <p class="home-subtitle" style="margin-top: 12px;">Completely anonymous. Fast matching. Each conversation lasts exactly 60 seconds.</p>
+                </div>
 
-        <div class="match-overlay" id="matchOverlay">
+                <div class="rules-list">
+                    <div class="rule-item">
+                        <i class="fa-solid fa-shield-cat"></i>
+                        <div><strong>Keep it Friendly:</strong> Safe space guidelines apply. No harassment, unsolicited advertising, or toxicity.</div>
+                    </div>
+                    <div class="rule-item">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                        <div><strong>60-Second Bound:</strong> Once the timer hits 0, your session automatically dissolves and you match with someone new.</div>
+                    </div>
+                    <div class="rule-item">
+                        <i class="fa-solid fa-mask"></i>
+                        <div><strong>Absolute Privacy:</strong> No credentials, log tracks, or profile records are compiled.</div>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="widget-label" style="margin-bottom: 10px;">Enter your Interests (Optional)</p>
+                    <div class="tag-input-container" onclick="document.getElementById('tagInput').focus()">
+                        <div id="tagChips" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                        <input type="text" class="tag-input-field" id="tagInput" placeholder="Type interest & press Enter..." onkeydown="handleTagKey(event)">
+                    </div>
+                </div>
+
+                <button class="btn btn-launch" onclick="launchMatchmaking()">Start Chatting <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i></button>
+            </div>
+        </div>
+
+        <div class="match-overlay hidden" id="matchOverlay">
             <div class="radar-circle">
                 <i class="fa-solid fa-satellite-dish"></i>
             </div>
-            <h3 style="font-weight: 500; color: var(--text-muted);" id="overlayStatusMsg">Connecting to server...</h3>
+            <h3 style="font-weight: 500; color: var(--text-muted);" id="overlayStatusMsg">Finding a partner...</h3>
         </div>
 
         <div class="messages-container" id="messagesBox"></div>

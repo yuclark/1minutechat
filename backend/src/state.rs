@@ -1,5 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 use crate::protocol::ServerMessage;
@@ -14,9 +15,11 @@ pub struct MatchInfo {
 /// Represents an active connection for an anonymous user
 #[derive(Debug)]
 pub struct UserSession {
+    #[allow(dead_code)]
     pub id: Uuid,
     pub tx: mpsc::Sender<ServerMessage>,
     pub tags: Vec<String>,
+    pub enqueued_at: Option<Instant>,
 }
 
 /// The global shared memory state of our application
@@ -32,7 +35,7 @@ pub type SharedState = Arc<Mutex<ChatState>>;
 impl ChatState {
     /// Registers a user session shell upon establishing a raw socket connection
     pub fn register_user(&mut self, id: Uuid, tx: mpsc::Sender<ServerMessage>) {
-        let session = UserSession { id, tx, tags: Vec::new() };
+        let session = UserSession { id, tx, tags: Vec::new(), enqueued_at: None };
         self.sessions.insert(id, session);
     }
 
@@ -40,6 +43,7 @@ impl ChatState {
     pub fn enqueue_user(&mut self, id: Uuid, tags: Vec<String>) {
         if let Some(session) = self.sessions.get_mut(&id) {
             session.tags = tags;
+            session.enqueued_at = Some(Instant::now());
         }
         if !self.queue.contains(&id) {
             self.queue.push_back(id);
@@ -48,6 +52,9 @@ impl ChatState {
 
     pub fn dequeue_user(&mut self, id: Uuid) {
         self.queue.retain(|&x| x != id);
+        if let Some(session) = self.sessions.get_mut(&id) {
+            session.enqueued_at = None;
+        }
     }
 
     pub fn disconnect_user(&mut self, id: Uuid) -> Option<Uuid> {
