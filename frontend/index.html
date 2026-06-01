@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- Premium Browser Tab Title -->
     <title>OneMinuteChat — Anonymous Interest Matching</title>
     
-    <!-- Modern Vector Lightning Bolt Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
     
-    <!-- Premium Google Fonts & Icon Packages -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -178,10 +175,28 @@
         }
         .btn-skip { background: #1a1625; color: #a5b4fc; border: 1px solid #2e264d; padding: 12px 16px; border-radius: 14px; display: inline-flex; align-items: center; gap: 6px; height: 44px; }
         @media (min-width: 640px) { .btn-skip { padding: 14px 24px; } }
-        .btn-skip:hover { background: #251e36; color: white; border-color: var(--accent); }
+        .btn-skip:hover:not(:disabled) { background: #251e36; color: white; border-color: var(--accent); }
         
         .btn-skip span { display: none; }
         @media (min-width: 480px) { .btn-skip span { display: inline; } }
+
+        /* End Session Control Button Styles */
+        .btn-end { 
+            background: rgba(239, 68, 68, 0.05); 
+            color: #fca5a5; 
+            border: 1px solid rgba(239, 68, 68, 0.2); 
+            padding: 12px 16px; 
+            border-radius: 14px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            height: 44px; 
+        }
+        @media (min-width: 640px) { .btn-end { padding: 14px 24px; } }
+        .btn-end:hover:not(:disabled) { background: rgba(239, 68, 68, 0.15); color: white; border-color: var(--danger); }
+        
+        .btn-end span { display: none; }
+        @media (min-width: 480px) { .btn-end span { display: inline; } }
 
         .btn-send { width: 40px; height: 40px; background: var(--accent); color: white; border-radius: 10px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
         .btn-send:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
@@ -268,7 +283,6 @@
 <body>
 
 <div class="app-shell">
-    <!-- Desktop-Only Sidebar Dock -->
     <aside class="sidebar">
         <div class="panel-top">
             <div class="logo-area" onclick="showHome()">
@@ -295,10 +309,8 @@
         </div>
     </aside>
 
-    <!-- Main Workspace Area -->
     <main class="chat-main">
         
-        <!-- Mobile Navigation Header Bar (Becomes visible exactly when Left Sidebar is dropped) -->
         <header class="mobile-navbar">
             <div class="status-display">
                 <span class="dot" id="mobileStatusDot"></span>
@@ -309,7 +321,6 @@
             </div>
         </header>
 
-        <!-- Landing Dashboard Screen View -->
         <div class="home-view" id="homeView">
             <div class="home-card">
                 <div>
@@ -344,7 +355,6 @@
             </div>
         </div>
 
-        <!-- Matching Queue Radar Overlay View -->
         <div class="match-overlay hidden" id="matchOverlay">
             <div class="radar-container">
                 <div class="travel-ring"></div>
@@ -366,15 +376,19 @@
             </button>
         </div>
 
-        <!-- Live Messaging Output Stream Layout -->
         <div class="messages-container" id="messagesBox"></div>
 
-        <!-- Bottom Chat Input Controls Dock -->
         <div class="bottom-dock">
-            <button class="btn btn-skip" onclick="sendSkip()">
+            <button class="btn btn-skip" id="skipBtn" onclick="sendSkip()" disabled style="opacity: 0.4; cursor: not-allowed;">
                 <i class="fa-solid fa-forward-step"></i>
                 <span>Skip</span>
             </button>
+            
+            <button class="btn btn-end" id="endBtn" onclick="sendDisconnect()" disabled style="opacity: 0.4; cursor: not-allowed;">
+                <i class="fa-solid fa-power-off"></i>
+                <span>End</span>
+            </button>
+            
             <div class="input-bar">
                 <input type="text" id="msgInput" placeholder="Send an anonymous message..." onkeypress="handleKey(event)" disabled>
                 <button class="btn btn-send" id="sendBtn" onclick="sendMessage()" disabled>

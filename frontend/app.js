@@ -1,7 +1,7 @@
 let ws;
 let userTags = [];
 let textRotationInterval = null;
-let isWaitingToJoin = false; // Tracks if the user clicked join while socket was connecting
+let isWaitingToJoin = false; 
 
 const loadingPhrases = [
     "Calibrating interest vectors...",
@@ -23,6 +23,10 @@ const msgInput = document.getElementById('msgInput');
 const sendBtn = document.getElementById('sendBtn');
 const tagInput = document.getElementById('tagInput');
 const tagChips = document.getElementById('tagChips');
+
+// Action Deck Control Elements
+const skipBtn = document.getElementById('skipBtn');
+const endBtn = document.getElementById('endBtn');
 
 // Sidebar Control Handles (Desktop)
 const statusDot = document.getElementById('statusDot');
@@ -46,7 +50,6 @@ function initSocket() {
 
     ws.onopen = () => {
         console.log("Secure network link consolidated.");
-        // If they clicked start chatting while it was disconnected, process the action now
         if (isWaitingToJoin) {
             isWaitingToJoin = false;
             executeJoinPacket();
@@ -73,8 +76,8 @@ function initSocket() {
                 homeView.classList.add('hidden');
                 updateUIState('connected', 'Connected to Stranger');
                 
-                msgInput.disabled = false;
-                sendBtn.disabled = false;
+                // Unlock full interactive environment controls
+                toggleActionDeck(false);
                 msgInput.focus();
                 break;
                 
@@ -93,18 +96,17 @@ function initSocket() {
         stopTextRotation();
         updateUIState('disconnected', 'Disconnected');
         
-        // If they are in the middle of matching, let them know we are recovering the link smoothly
         if (homeView.classList.contains('hidden')) {
             overlayStatusMsg.innerText = 'Uplink dropped by phone. Re-establishing connection...';
-            isWaitingToJoin = true; // Auto-re-enqueue them once back online
+            isWaitingToJoin = true; 
         }
         
-        setTimeout(initSocket, 2000); // Quick retry window
+        toggleActionDeck(true);
+        setTimeout(initSocket, 2000); 
     };
 }
 
 function launchMatchmaking() {
-    // Show the radar screen immediately to provide instant visual feedback
     homeView.classList.add('hidden');
     matchOverlay.classList.remove('hidden');
     
@@ -120,7 +122,7 @@ function launchMatchmaking() {
 }
 
 function executeJoinPacket() {
-    updateUIState('matching', 'Searching for a stranger... ');
+    updateUIState('matching', 'Searching for a stranger...');
     startTextRotation("Searching for a stranger...");
     console.log("Submitting match protocol request with tracking tags:", userTags);
     ws.send(JSON.stringify({
@@ -133,6 +135,18 @@ function sendCancel() {
     console.log("Canceling matchmaking procedure. Transmitting queue eviction frame.");
     isWaitingToJoin = false;
     stopTextRotation();
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'cancel' }));
+    }
+    showHome();
+}
+
+function sendDisconnect() {
+    console.log("Forcing immediate session termination. Re-routing straight to Home.");
+    messagesBox.innerHTML = '';
+    updateTimerDisplay("01:00");
+    
+    // Notify async server engine that we are leaving the communication node
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'cancel' }));
     }
@@ -167,8 +181,7 @@ function showHome() {
     homeView.classList.remove('hidden');
     matchOverlay.classList.add('hidden');
     updateUIState('home', 'Home Dashboard');
-    msgInput.disabled = true;
-    sendBtn.disabled = true;
+    toggleActionDeck(true);
 }
 
 function handleTagKey(e) {
@@ -196,6 +209,23 @@ function renderChips() {
         chip.innerHTML = `${tag} <i class="fa-solid fa-xmark" onclick="removeTag('${tag}')"></i>`;
         tagChips.appendChild(chip);
     });
+}
+
+function toggleActionDeck(shouldDisable) {
+    msgInput.disabled = shouldDisable;
+    sendBtn.disabled = shouldDisable;
+    skipBtn.disabled = shouldDisable;
+    endBtn.disabled = shouldDisable;
+    
+    const targetOpacity = shouldDisable ? "0.4" : "1";
+    const targetCursor = shouldDisable ? "not-allowed" : "pointer";
+    
+    skipBtn.style.opacity = targetOpacity;
+    skipBtn.style.cursor = targetCursor;
+    endBtn.style.opacity = targetOpacity;
+    endBtn.style.cursor = targetCursor;
+    
+    if (shouldDisable) msgInput.value = '';
 }
 
 function updateUIState(state, text) {
@@ -249,11 +279,9 @@ function sendSkip() {
     updateTimerDisplay("01:00");
     
     startTextRotation("Searching for a stranger...");
-    
     updateUIState('matching', 'Searching for a stranger...');
     matchOverlay.classList.remove('hidden');
-    msgInput.disabled = true;
-    sendBtn.disabled = true;
+    toggleActionDeck(true);
 
     ws.send(JSON.stringify({ type: 'skip' }));
 }
