@@ -84,7 +84,7 @@
         .rule-item { display: flex; gap: 14px; align-items: flex-start; font-size: 14px; line-height: 1.5; color: #d1d5db; }
         .rule-item i { color: var(--accent); margin-top: 3px; }
 
-        /* Premium Tag Input Elements */
+        /* Tag Input Elements */
         .tag-input-container {
             background: var(--bg-surface); border: 1px solid var(--border);
             border-radius: 14px; padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
@@ -135,27 +135,66 @@
         .btn-send { width: 42px; height: 42px; background: var(--accent); color: white; border-radius: 10px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; }
         .btn-send:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
 
-        /* Search Screen Radar Layer overlay */
+        /* Immersive Tunnel / Radar Search Screen Overlay */
         .match-overlay {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             background: var(--bg-base); z-index: 30;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 32px;
+        }
+        
+        /* Multi-layered "Traveling Inward" Animation Module */
+        .radar-container {
+            position: relative; width: 140px; height: 140px;
+            display: flex; align-items: center; justify-content: center;
         }
         .radar-circle {
-            width: 96px; height: 96px; border-radius: 50%;
-            background: rgba(99, 102, 241, 0.03); border: 2px solid var(--accent);
+            width: 80px; height: 80px; border-radius: 50%;
+            background: rgba(99, 102, 241, 0.05); border: 2px solid var(--accent);
             display: flex; align-items: center; justify-content: center;
-            font-size: 28px; color: var(--accent);
-            animation: radar-pulse 2s infinite ease-in-out;
+            font-size: 24px; color: var(--accent); z-index: 2;
+        }
+        .travel-ring {
+            position: absolute; width: 100%; height: 100%;
+            border: 1px dashed rgba(99, 102, 241, 0.2); border-radius: 50%;
+            animation: rotate-clockwise 8s linear infinite;
+        }
+        .travel-wave {
+            position: absolute; width: 100%; height: 100%;
+            border: 2px solid var(--accent); border-radius: 50%; opacity: 0;
+            animation: move-inward 2s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+        }
+        .travel-wave:nth-child(3) { animation-delay: 0.6s; }
+        .travel-wave:nth-child(4) { animation-delay: 1.2s; }
+
+        /* Status Text Transition Layout */
+        .status-msg-container {
+            text-align: center; height: 24px; overflow: hidden; display: flex; justify-content: center; align-items: center;
+        }
+        .status-msg-text {
+            font-weight: 500; color: var(--text-muted); font-size: 15px; letter-spacing: 0.02em;
+            animation: text-fade-in 0.4s ease-out;
+        }
+
+        /* Inline Linear Progressive Track */
+        .travel-bar-track {
+            width: 180px; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; position: relative; margin-top: -8px;
+        }
+        .travel-bar-fill {
+            position: absolute; width: 60px; height: 100%; background: linear-gradient(to right, transparent, var(--accent), transparent);
+            animation: bar-travel 1.4s infinite linear;
         }
 
         .hidden { display: none !important; }
 
-        @keyframes radar-pulse {
-            0% { transform: scale(0.92); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.3); }
-            70% { transform: scale(1); box-shadow: 0 0 0 24px rgba(99, 102, 241, 0); }
-            100% { transform: scale(0.92); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+        /* Cinematic Animations */
+        @keyframes rotate-clockwise { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes move-inward {
+            0% { transform: scale(1.6); opacity: 0; }
+            50% { opacity: 0.3; }
+            100% { transform: scale(0.7); opacity: 0; }
         }
+        @keyframes bar-travel { 0% { left: -60px; } 100% { left: 180px; } }
+        @keyframes text-fade-in { 0% { opacity: 0; transform: translateY(4px); } 100% { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { 0% { transform: translateY(6px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
 
         @media (max-width: 768px) {
@@ -232,10 +271,21 @@
         </div>
 
         <div class="match-overlay hidden" id="matchOverlay">
-            <div class="radar-circle">
-                <i class="fa-solid fa-satellite-dish"></i>
+            <div class="radar-container">
+                <div class="travel-ring"></div>
+                <div class="travel-wave"></div>
+                <div class="travel-wave"></div>
+                <div class="travel-wave"></div>
+                <div class="radar-circle">
+                    <i class="fa-solid fa-user-astronaut"></i>
+                </div>
             </div>
-            <h3 style="font-weight: 500; color: var(--text-muted);" id="overlayStatusMsg">Finding a partner...</h3>
+            <div class="status-msg-container">
+                <h3 class="status-msg-text" id="overlayStatusMsg">Finding a partner...</h3>
+            </div>
+            <div class="travel-bar-track">
+                <div class="travel-bar-fill"></div>
+            </div>
         </div>
 
         <div class="messages-container" id="messagesBox"></div>

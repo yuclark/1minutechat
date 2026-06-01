@@ -1,5 +1,18 @@
 let ws;
 let userTags = [];
+let textRotationInterval = null;
+
+// Clean, contextual loading status phrases
+const loadingPhrases = [
+    "Calibrating interest vectors...",
+    "Scanning active anonymous nodes...",
+    "Filtering matching frequencies...",
+    "Knocking on secure tunnels...",
+    "Routing downbound pathways...",
+    "Encrypting session tokens...",
+    "Checking tag overlaps...",
+    "Almost there, formatting the chatroom..."
+];
 
 // DOM Element Selectors
 const homeView = document.getElementById('homeView');
@@ -29,9 +42,11 @@ function initSocket() {
         switch (msg.type) {
             case 'status':
                 updateUIState('matching', msg.payload);
-                overlayStatusMsg.innerText = msg.payload;
                 matchOverlay.classList.remove('hidden');
                 homeView.classList.add('hidden');
+                
+                // Fire up text rotator when matchmaking triggers
+                startTextRotation(msg.payload);
                 
                 msgInput.disabled = true;
                 sendBtn.disabled = true;
@@ -39,6 +54,8 @@ function initSocket() {
                 break;
                 
             case 'match_found':
+                console.log("Match verified. Unlocking conversation fields.");
+                stopTextRotation();
                 messagesBox.innerHTML = ''; 
                 matchOverlay.classList.add('hidden');
                 homeView.classList.add('hidden');
@@ -61,11 +78,35 @@ function initSocket() {
     };
 
     ws.onclose = () => {
+        stopTextRotation();
         updateUIState('disconnected', 'Disconnected');
         overlayStatusMsg.innerText = 'Network link disrupted. Reconnecting...';
         matchOverlay.classList.remove('hidden');
         setTimeout(initSocket, 3000);
     };
+}
+
+function startTextRotation(initialBackendMsg) {
+    stopTextRotation();
+    overlayStatusMsg.innerText = initialBackendMsg;
+    
+    let phraseIndex = 0;
+    textRotationInterval = setInterval(() => {
+        // Apply smooth CSS text re-entry animation trigger
+        overlayStatusMsg.style.animation = 'none';
+        void overlayStatusMsg.offsetWidth; // Force element re-flow
+        overlayStatusMsg.style.animation = 'text-fade-in 0.4s ease-out';
+        
+        overlayStatusMsg.innerText = loadingPhrases[phraseIndex];
+        phraseIndex = (phraseIndex + 1) % loadingPhrases.length;
+    }, 2800);
+}
+
+function stopTextRotation() {
+    if (textRotationInterval) {
+        clearInterval(textRotationInterval);
+        textRotationInterval = null;
+    }
 }
 
 function launchMatchmaking() {
@@ -77,6 +118,7 @@ function launchMatchmaking() {
 }
 
 function showHome() {
+    stopTextRotation();
     homeView.classList.remove('hidden');
     matchOverlay.classList.add('hidden');
     updateUIState('home', 'Home Dashboard');
@@ -149,15 +191,16 @@ function sendMessage() {
 
 function sendSkip() {
     console.log("Skip initiated. Forcing clean local interface reset.");
-    
-    // Reset layout states instantly to remove instant-rematch latency perception
     messagesBox.innerHTML = '';
+    updateTimerDisplay("01:00");
+    
+    // Fall straight into the upgraded text rotator on Skip action
+    startTextRotation("Searching for a stranger...");
+    
     updateUIState('matching', 'Searching for a stranger...');
-    overlayStatusMsg.innerText = 'Searching for a stranger...';
     matchOverlay.classList.remove('hidden');
     msgInput.disabled = true;
     sendBtn.disabled = true;
-    updateTimerDisplay("01:00");
 
     ws.send(JSON.stringify({ type: 'skip' }));
 }
