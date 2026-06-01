@@ -36,7 +36,13 @@ const mobileTimerVal = document.getElementById('mobileTimerVal');
 function initSocket() {
     console.log("Initializing protocol channel connection...");
     
-ws = new WebSocket('ws://127.0.0.1:4000/ws');
+    // Automatically detect environment to switch protocols and hosts seamlessly
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const wsUrl = isLocalhost 
+        ? 'ws://127.0.0.1:4000/ws' 
+        : 'wss://oneminutechat-rpl3.onrender.com/ws'; 
+
+    ws = new WebSocket(wsUrl);
 
     ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
@@ -167,7 +173,6 @@ function renderChips() {
 }
 
 function updateUIState(state, text) {
-    // Sync text values to both layouts simultaneously
     statusTxt.innerText = text;
     mobileStatusTxt.innerText = text;
     
