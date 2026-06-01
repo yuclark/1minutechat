@@ -2,6 +2,7 @@ let ws;
 let userTags = [];
 let textRotationInterval = null;
 let isWaitingToJoin = false; 
+let isConnected = false; // Active connection state tracker
 
 const loadingPhrases = [
     "Calibrating interest vectors...",
@@ -62,21 +63,37 @@ function initSocket() {
         
         switch (msg.type) {
             case 'status':
-                updateUIState('matching', msg.payload);
-                if (!textRotationInterval) {
-                    startTextRotation(msg.payload);
+                // INTERCEPT: If we were connected and receive a status update, the stranger left!
+                if (isConnected) {
+                    isConnected = false;
+                    appendMessage('sys', "❌ Stranger disconnected early.");
+                    toggleActionDeck(true);
+                    
+                    // Delay the radar overlay slightly so the user can read the chatbox notice
+                    setTimeout(() => {
+                        if (!isConnected && !homeView.classList.contains('hidden')) {
+                            matchOverlay.classList.remove('hidden');
+                            updateUIState('matching', 'Finding a new partner...');
+                            startTextRotation("Stranger disconnected early. Finding a new partner...");
+                        }
+                    }, 1200);
+                } else {
+                    updateUIState('matching', msg.payload);
+                    if (!textRotationInterval) {
+                        startTextRotation(msg.payload);
+                    }
                 }
                 break;
                 
             case 'match_found':
                 console.log("Match verified. Unlocking conversation fields.");
+                isConnected = true;
                 stopTextRotation();
                 messagesBox.innerHTML = ''; 
                 matchOverlay.classList.add('hidden');
                 homeView.classList.add('hidden');
                 updateUIState('connected', 'Connected to Stranger');
                 
-                // Unlock full interactive environment controls
                 toggleActionDeck(false);
                 msgInput.focus();
                 break;
@@ -88,6 +105,13 @@ function initSocket() {
             case 'timer':
                 const secs = msg.payload.remaining_seconds;
                 updateTimerDisplay(`00:${secs < 10 ? '0' : ''}${secs}`);
+                
+                // If timer runs out naturally, reset state
+                if (secs === 0) {
+                    isConnected = false;
+                    appendMessage('sys', "⏳ Time is up! Session dissolved.");
+                    toggleActionDeck(true);
+                }
                 break;
         }
     };
@@ -101,6 +125,7 @@ function initSocket() {
             isWaitingToJoin = true; 
         }
         
+        isConnected = false;
         toggleActionDeck(true);
         setTimeout(initSocket, 2000); 
     };
@@ -122,6 +147,7 @@ function launchMatchmaking() {
 }
 
 function executeJoinPacket() {
+    isConnected = false;
     updateUIState('matching', 'Searching for a stranger...');
     startTextRotation("Searching for a stranger...");
     console.log("Submitting match protocol request with tracking tags:", userTags);
@@ -134,6 +160,7 @@ function executeJoinPacket() {
 function sendCancel() {
     console.log("Canceling matchmaking procedure. Transmitting queue eviction frame.");
     isWaitingToJoin = false;
+    isConnected = false;
     stopTextRotation();
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'cancel' }));
@@ -145,8 +172,8 @@ function sendDisconnect() {
     console.log("Forcing immediate session termination. Re-routing straight to Home.");
     messagesBox.innerHTML = '';
     updateTimerDisplay("01:00");
+    isConnected = false;
     
-    // Notify async server engine that we are leaving the communication node
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'cancel' }));
     }
@@ -178,6 +205,7 @@ function stopTextRotation() {
 function showHome() {
     stopTextRotation();
     isWaitingToJoin = false;
+    isConnected = false;
     homeView.classList.remove('hidden');
     matchOverlay.classList.add('hidden');
     updateUIState('home', 'Home Dashboard');
@@ -187,7 +215,8 @@ function showHome() {
 function handleTagKey(e) {
     if (e.key === 'Enter' || e.key === ',') {
         e.preventDefault();
-        const tag = tagInput.value.trim().replace(/,/g, '');
+        // Convert the tag to lowercase immediately to prevent iOS capitalization bugs
+        const tag = tagInput.value.trim().replace(/,/g, '').toLowerCase();
         if (tag && !userTags.includes(tag)) {
             userTags.push(tag);
             renderChips();
@@ -262,7 +291,7 @@ function appendMessage(classification, text) {
 
 function sendMessage() {
     const text = msgInput.value.trim();
-    if (!text) return;
+    if (!text || !isConnected) return;
 
     ws.send(JSON.stringify({
         type: 'send_message',
@@ -277,6 +306,7 @@ function sendSkip() {
     console.log("Skip initiated. Forcing clean local interface reset.");
     messagesBox.innerHTML = '';
     updateTimerDisplay("01:00");
+    isConnected = false;
     
     startTextRotation("Searching for a stranger...");
     updateUIState('matching', 'Searching for a stranger...');
