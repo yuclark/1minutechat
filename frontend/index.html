@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonymous Chat</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .chat-container { width: 400px; height: 600px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: #007bff; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .timer { background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; font-size: 14px; }
+        .messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #fafafa; }
+        .msg { padding: 8px 12px; border-radius: 15px; max-width: 70%; word-break: break-word; }
+        .msg.you { background: #007bff; color: white; align-self: flex-end; }
+        .msg.stranger { background: #e4e6eb; color: black; align-self: flex-start; }
+        .msg.system { background: transparent; color: #65676b; align-self: center; font-size: 13px; font-style: italic; max-width: 100%; }
+        .footer { padding: 10px; display: flex; gap: 8px; border-top: 1px solid #ddd; background: white; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
+        button { padding: 10px 16px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
+        .btn-send { background: #007bff; color: white; }
+        .btn-skip { background: #dc3545; color: white; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="header">
+        <span id="status">Connecting...</span>
+        <span class="timer" id="timer">01:00</span>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="footer">
+        <button class="btn-skip" id="skipBtn" onclick="sendSkip()">Skip</button>
+        <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="handleKey(event)" disabled>
+        <button class="btn-send" id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
