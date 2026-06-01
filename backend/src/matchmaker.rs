@@ -2,91 +2,114 @@ use std::time::Duration;
 use tokio::time::sleep;
 use uuid::Uuid;
 use crate::protocol::ServerMessage;
-use crate::state::SharedState;
+use crate::state::{SharedState, MatchInfo};
 
-/// The primary background loop that orchestrates user matching.
 pub async fn run_matchmaker(state: SharedState) {
     tracing::info!("Matchmaker engine background task started.");
 
     loop {
-        // 1. Pause for a tiny moment so we don't hog 100% of the server's CPU
-        sleep(Duration::from_millis(200)).await;
-
-        // 2. Safely lock the application state
+        sleep(Duration::from_millis(250)).await;
         let mut guard = state.lock().await;
 
-        // 3. Keep matching pairs as long as there are at least two people waiting
-        while guard.queue.len() >= 2 {
-            let user1_id = guard.queue.pop_front().unwrap();
-            let user2_id = guard.queue.pop_front().unwrap();
+        if guard.queue.len() >= 2 {
+            let mut matched_indices: Option<(usize, usize)> = None;
 
-            // Establish the bidirectional match mapping
-            guard.matches.insert(user1_id, user2_id);
-            guard.matches.insert(user2_id, user1_id);
+            // Search for interest intersections
+            'outer: for i in 0..guard.queue.len() {
+                for j in (i + 1)..guard.queue.len() {
+                    let u1 = guard.queue[i];
+                    let u2 = guard.queue[j];
 
-            tracing::info!("Match found: {} <---> {}", user1_id, user2_id);
+                    if let (Some(s1), Some(s2)) = (guard.sessions.get(&u1), guard.sessions.get(&u2)) {
+                        let shares_interest = s1.tags.iter().any(|t1| {
+                            s2.tags.iter().any(|t2| t1.to_lowercase() == t2.to_lowercase())
+                        });
 
-            // 4. Notify User 1
+                        if shares_interest {
+                            matched_indices = Some((i, j));
+                            break 'outer;
+                        }
+                    }
+                }
+            }
+
+            // Extract the matched pair (fall back to the oldest two in queue if no interest overlap found)
+            let (idx1, idx2) = match matched_indices {
+                Some(pair) => pair,
+                None => (0, 1),
+            };
+
+            let user2_id = guard.queue.remove(idx2).unwrap();
+            let user1_id = guard.queue.remove(idx1).unwrap();
+
+            // Generate a Match ID distinct to this specific pairing event
+            let match_id = Uuid::new_v4();
+            guard.matches.insert(user1_id, MatchInfo { partner_id: user2_id, match_id });
+            guard.matches.insert(user2_id, MatchInfo { partner_id: user1_id, match_id });
+
+            tracing::info!("Match consolidated: {} <---> {} [Session ID: {}]", user1_id, user2_id, match_id);
+
             if let Some(user1_session) = guard.sessions.get(&user1_id) {
                 let _ = user1_session.tx.send(ServerMessage::MatchFound).await;
             }
-
-            // 5. Notify User 2
             if let Some(user2_session) = guard.sessions.get(&user2_id) {
                 let _ = user2_session.tx.send(ServerMessage::MatchFound).await;
             }
 
-            // 6. Spawn an independent, isolated countdown task for this specific pair
-            tokio::spawn(start_chat_timer(user1_id, user2_id, state.clone()));
+            tokio::spawn(start_chat_timer(user1_id, user2_id, match_id, state.clone()));
         }
     }
 }
 
-/// Runs a 1-minute countdown timer for an active chat pair.
-async fn start_chat_timer(user1: Uuid, user2: Uuid, state: SharedState) {
+async fn start_chat_timer(user1: Uuid, user2: Uuid, match_id: Uuid, state: SharedState) {
     let mut seconds_remaining = 60;
 
     while seconds_remaining > 0 {
         sleep(Duration::from_secs(1)).await;
         seconds_remaining -= 1;
 
-        // Lock the state briefly to check if the match still exists
         let guard = state.lock().await;
-        
-        // If one user skipped or disconnected early, the match mapping is destroyed.
-        // We catch that here and terminate this timer task instantly.
-        if !guard.matches.contains_key(&user1) || !guard.matches.contains_key(&user2) {
-            return;
-        }
+        let u1_match = guard.matches.get(&user1);
+        let u2_match = guard.matches.get(&user2);
 
-        // Broadcast the updated remaining time to both users
-        if let Some(session) = guard.sessions.get(&user1) {
-            let _ = session.tx.send(ServerMessage::Timer { remaining_seconds: seconds_remaining }).await;
-        }
-        if let Some(session) = guard.sessions.get(&user2) {
-            let _ = session.tx.send(ServerMessage::Timer { remaining_seconds: seconds_remaining }).await;
+        // Terminate instantly if either user skipped or rematched into a different session
+        match (u1_match, u2_match) {
+            (Some(m1), Some(m2)) if m1.match_id == match_id && m2.match_id == match_id => {
+                if let Some(session) = guard.sessions.get(&user1) {
+                    let _ = session.tx.send(ServerMessage::Timer { remaining_seconds: seconds_remaining }).await;
+                }
+                if let Some(session) = guard.sessions.get(&user2) {
+                    let _ = session.tx.send(ServerMessage::Timer { remaining_seconds: seconds_remaining }).await;
+                }
+            }
+            _ => {
+                // Session is no longer active. Silently kill this worker task.
+                return;
+            }
         }
     }
 
-    // --- IF THE TIMER REACHED ZERO ---
-    tracing::info!("Timer expired for pair {} and {}. Disconnecting...", user1, user2);
+    tracing::info!("Timer expired safely for match ID: {}.", match_id);
     let mut guard = state.lock().await;
 
-    // Remove the match mapping so their loops know they are no longer chatting
-    guard.matches.remove(&user1);
-    guard.matches.remove(&user2);
+    // Clean up matches maps safely without touching younger rematch structures
+    if let Some(m1) = guard.matches.get(&user1) {
+        if m1.match_id == match_id { guard.matches.remove(&user1); }
+    }
+    if let Some(m2) = guard.matches.get(&user2) {
+        if m2.match_id == match_id { guard.matches.remove(&user2); }
+    }
 
-    // Throw them both back into the matchmaking waiting list automatically!
-    guard.enqueue_user(user1);
-    guard.enqueue_user(user2);
+    let tags1 = guard.sessions.get(&user1).map(|s| s.tags.clone()).unwrap_or_default();
+    let tags2 = guard.sessions.get(&user2).map(|s| s.tags.clone()).unwrap_or_default();
 
-    // Notify their frontend loops to show the searching screen again
+    guard.enqueue_user(user1, tags1);
+    guard.enqueue_user(user2, tags2);
+
     if let Some(session) = guard.sessions.get(&user1) {
-        let _ = session.tx.send(ServerMessage::Status { message: "Time expired! Matching with a new stranger...".to_string() }).await;
-        let _ = session.tx.send(ServerMessage::Status { message: "Searching for a stranger...".to_string() }).await;
+        let _ = session.tx.send(ServerMessage::Status { message: "Time expired! Searching for a new match...".to_string() }).await;
     }
     if let Some(session) = guard.sessions.get(&user2) {
-        let _ = session.tx.send(ServerMessage::Status { message: "Time expired! Matching with a new stranger...".to_string() }).await;
-        let _ = session.tx.send(ServerMessage::Status { message: "Searching for a stranger...".to_string() }).await;
+        let _ = session.tx.send(ServerMessage::Status { message: "Time expired! Searching for a new match...".to_string() }).await;
     }
 }

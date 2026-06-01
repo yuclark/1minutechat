@@ -5,6 +5,9 @@ use uuid::Uuid;
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", content = "payload")]
 pub enum ClientMessage {
+    #[serde(rename = "join")]
+    Join { tags: Vec<String> },
+    
     #[serde(rename = "send_message")]
     SendMessage { text: String },
     
@@ -22,7 +25,7 @@ pub enum ServerMessage {
     #[serde(rename = "chat_message")]
     ChatMessage {
         id: Uuid,
-        sender: String, // Will be "You" or "Stranger" on the client side
+        sender: String,
         text: String,
     },
     
