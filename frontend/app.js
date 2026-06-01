@@ -36,8 +36,7 @@ const mobileTimerVal = document.getElementById('mobileTimerVal');
 function initSocket() {
     console.log("Initializing protocol channel connection...");
     
-    // Change this string to your production wss:// URL when deploying to Render
-    ws = new WebSocket('ws://127.0.0.1:4000/ws');
+ws = new WebSocket('ws://127.0.0.1:4000/ws');
 
     ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
